@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+
+[project]
+name = "pwa-manager"
+version = "0.1.0"
+description = "Professional PWA manager for Linux desktop environments"
+readme = "README.md"
+requires-python = ">=3.12"
+license = {file = "LICENSE"}
+authors = [
+    {name = "Oleksii"}
+]
+
+dependencies = []
+
+
+[project.scripts]
+pwa-manager = "pwa_manager.main:main"
+
+
+[tool.setuptools.packages.find]
+where = ["src"]
