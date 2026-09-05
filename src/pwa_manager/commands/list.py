@@ -4,16 +4,13 @@ PWA Manager.
 List command.
 """
 
-from ..context import get_apps
 
-
-def run():
-
-    apps = get_apps()
+def run(apps):
 
     print(
         f"Found {len(apps)} PWA applications:"
     )
+
 
     for app in apps:
 

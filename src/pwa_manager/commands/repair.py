@@ -4,13 +4,11 @@ PWA Manager.
 Repair command.
 """
 
-from ..context import get_apps
 from ..repair import run_repair
 
 
-
-def run():
+def run(apps):
 
     return run_repair(
-        get_apps()
+        apps
     )

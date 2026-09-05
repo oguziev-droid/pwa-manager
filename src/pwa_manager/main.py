@@ -71,6 +71,14 @@ def print_help():
         "  clean --fix"
     )
 
+    print(
+        "  icons"
+    )
+
+    print(
+        "  icons --fix"
+    )
+
     print()
 
     print(

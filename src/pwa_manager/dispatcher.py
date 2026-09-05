@@ -7,6 +7,8 @@ Command dispatcher.
 import sys
 
 
+from .context import get_apps
+
 from .commands.list import run as list_command
 from .commands.doctor import run as doctor_command
 from .commands.status import run as status_command
@@ -15,7 +17,7 @@ from .commands.backup import run as backup_command
 from .commands.clean import run as clean_command
 from .commands.restore import run as restore_command
 from .commands.export import run as export_command
-
+from .commands.icons import run as icons_command
 
 
 COMMANDS = {
@@ -35,6 +37,8 @@ COMMANDS = {
     "restore": restore_command,
 
     "export": export_command,
+
+    "icons": icons_command,
 
 }
 
@@ -73,6 +77,14 @@ def print_help():
     )
 
     print(
+        "  restore <backup>"
+    )
+
+    print(
+        "  export"
+    )
+
+    print(
         "  clean"
     )
 
@@ -81,13 +93,12 @@ def print_help():
     )
 
     print(
-        "  restore <backup>"
+        "  icons"
     )
 
     print(
-        "  export"
+        "  icons --fix"
     )
-
 
 
 def dispatch():
@@ -102,6 +113,10 @@ def dispatch():
     command = sys.argv[1]
 
 
+    apps = get_apps()
+
+
+
     if command == "clean":
 
         fix = (
@@ -110,6 +125,21 @@ def dispatch():
         )
 
         return clean_command(
+            apps,
+            fix=fix
+        )
+
+
+
+    if command == "icons":
+
+        fix = (
+            len(sys.argv) > 2
+            and sys.argv[2] == "--fix"
+        )
+
+        return icons_command(
+            apps,
             fix=fix
         )
 
@@ -139,7 +169,9 @@ def dispatch():
 
     if handler:
 
-        return handler()
+        return handler(
+            apps
+        )
 
 
     print_help()

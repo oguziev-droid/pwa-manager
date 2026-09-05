@@ -19,6 +19,7 @@ def run_status(apps):
     warnings = 0
     errors = 0
 
+
     icon_types = {
         "file": 0,
         "theme": 0,
@@ -28,14 +29,21 @@ def run_status(apps):
 
     for app in apps:
 
-        desktop_ok = check_desktop_file(app)
+        desktop_ok = check_desktop_file(
+            app
+        )
 
-        exec_ok = check_exec(app)
+        exec_ok = check_exec(
+            app
+        )
 
-        icon_ok, icon_type = check_icon(app)
+        icon_ok, icon_type = check_icon(
+            app
+        )
 
 
         if icon_type in icon_types:
+
             icon_types[icon_type] += 1
 
 
@@ -44,12 +52,15 @@ def run_status(apps):
             and exec_ok
             and icon_ok
         ):
+
             healthy += 1
 
         elif icon_ok:
+
             warnings += 1
 
         else:
+
             errors += 1
 
 

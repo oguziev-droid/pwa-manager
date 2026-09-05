@@ -4,13 +4,11 @@ PWA Manager.
 Backup command.
 """
 
-from ..context import get_apps
 from ..backup import create_backup
 
 
-
-def run():
+def run(apps):
 
     return create_backup(
-        get_apps()
+        apps
     )

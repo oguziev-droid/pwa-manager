@@ -1,16 +1,12 @@
 """
-PWA Manager.
-
-Status command.
+PWA Manager Status Command.
 """
 
-from ..context import get_apps
 from ..status import run_status
 
 
-
-def run():
+def run(apps):
 
     return run_status(
-        get_apps()
+        apps
     )
