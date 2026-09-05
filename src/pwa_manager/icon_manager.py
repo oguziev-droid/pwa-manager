@@ -8,6 +8,8 @@ from pathlib import Path
 import re
 import shutil
 
+from .icons import find_icon
+
 
 ICON_STORAGE = (
     Path.home()
@@ -21,9 +23,20 @@ ICON_STORAGE.mkdir(
 )
 
 
+DESKTOP_DIRS = [
+    Path.home() / ".local/share/applications",
+    Path.home() / "Desktop",
+]
+
+
 DESKTOP_ICON_PATTERN = re.compile(
     r"^Icon=.*$",
     re.MULTILINE
+)
+
+
+APP_ID_PATTERN = re.compile(
+    r"chrome-([a-z]+)-Default"
 )
 
 
@@ -32,32 +45,18 @@ def detect_icon_type(icon):
     if not icon:
         return "missing"
 
-
     icon = str(icon)
-
 
     if icon.startswith("/"):
         path = Path(icon)
 
         if path.exists():
-
-            if path.suffix in [
-                ".png",
-                ".svg",
-                ".svgz",
-            ]:
-                return "file"
-
             return "file"
-
 
         return "missing file"
 
-
     if icon.startswith("chrome-"):
-
         return "chrome"
-
 
     return "theme"
 
@@ -75,13 +74,11 @@ def analyze_icons(apps):
 
     print()
 
-
     for app in apps:
 
         icon_type = detect_icon_type(
             app.icon
         )
-
 
         print(
             app.display_name
@@ -99,61 +96,79 @@ def analyze_icons(apps):
 
 
 
-def find_replacement_icon(app):
+def resolve_real_icon(app):
+    """
+    Find the actual icon file for an app, regardless of
+    whether its current Icon= value is a direct path or
+    a theme name (e.g. chrome-<id>-Default).
+    """
 
     if not app.icon:
         return None
 
+    icon_path = Path(app.icon)
 
-    icon = Path(
-        app.icon
+    if icon_path.exists():
+        return icon_path
+
+    # Theme-name style icon (e.g. "chrome-<id>-Default")
+    # search standard icon directories for a real file.
+
+    return find_icon(app.icon)
+
+
+
+def extract_app_id(desktop_file):
+
+    match = APP_ID_PATTERN.search(
+        desktop_file.name
     )
 
+    if not match:
+        return None
 
-    if icon.exists():
-
-        return icon
-
-
-    return None
+    return match.group(1)
 
 
 
-def update_desktop_icon(app, icon_path):
+def find_sibling_desktop_files(app_id):
+    """
+    Find every .desktop file across managed locations
+    (applications dir + Desktop) that refers to the same
+    Chrome app-id, so all copies get fixed together.
+    """
 
-    # Rewrite the Icon= line in the .desktop file so it
-    # points at the centrally-managed icon copy instead
-    # of whatever theme/path it used before.
+    if not app_id:
+        return []
 
-    desktop_file = Path(
-        app.desktop_file
-    )
+    matches = []
 
+    for directory in DESKTOP_DIRS:
+
+        if not directory.exists():
+            continue
+
+        for desktop in directory.glob(f"*{app_id}*.desktop"):
+            matches.append(desktop)
+
+    return matches
+
+
+
+def update_desktop_icon(desktop_file, icon_path):
 
     if not desktop_file.exists():
-
         return False
-
 
     content = desktop_file.read_text()
 
-
     new_line = f"Icon={icon_path}"
 
-
     if new_line in content:
-
-        # Already pointing at the right icon, nothing to do.
-
         return False
-
 
     if not DESKTOP_ICON_PATTERN.search(content):
-
-        # No Icon= line present, don't guess where to insert it.
-
         return False
-
 
     new_content = DESKTOP_ICON_PATTERN.sub(
         new_line,
@@ -161,11 +176,9 @@ def update_desktop_icon(app, icon_path):
         count=1,
     )
 
-
     desktop_file.write_text(
         new_content
     )
-
 
     return True
 
@@ -183,22 +196,20 @@ def repair_icons(apps):
 
     print()
 
-
     prepared = 0
-
     applied = 0
-
 
     for app in apps:
 
-        source = find_replacement_icon(
-            app
-        )
-
+        source = resolve_real_icon(app)
 
         if not source:
             continue
 
+        # Centralize a copy for our own bookkeeping,
+        # but always point Icon= at an absolute file path
+        # (theme-name lookups are unreliable across
+        # different desktop shells/extensions).
 
         destination = (
             ICON_STORAGE
@@ -206,38 +217,48 @@ def repair_icons(apps):
             source.name
         )
 
-
         if not destination.exists():
-
             shutil.copy2(
                 source,
                 destination
             )
 
-
         prepared += 1
 
+        # Fix the icon everywhere the same app-id appears:
+        # applications dir AND Desktop, if present.
 
-        changed = update_desktop_icon(
-            app,
-            destination
-        )
+        app_id = extract_app_id(app.desktop_file)
 
+        targets = find_sibling_desktop_files(app_id) if app_id else [app.desktop_file]
 
-        if changed:
+        if app.desktop_file not in targets:
+            targets.append(app.desktop_file)
 
+        changed_any = False
+
+        for target in targets:
+
+            changed = update_desktop_icon(
+                target,
+                source
+            )
+
+            if changed:
+                changed_any = True
+
+        if changed_any:
             applied += 1
 
             print(
-                f"{app.display_name}: {destination}  (desktop file updated)"
+                f"{app.display_name}: {source}  (desktop file(s) updated)"
             )
 
         else:
 
             print(
-                f"{app.display_name}: {destination}  (already up to date)"
+                f"{app.display_name}: {source}  (already up to date)"
             )
-
 
     print()
 
